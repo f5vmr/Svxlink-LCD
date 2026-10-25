@@ -13,6 +13,7 @@ NO DTMF TRANSMISSION IN THIS VERSION.
 
 import json
 import signal
+import socket
 import time
 import urllib.request
 
@@ -27,6 +28,8 @@ from dtmf_control import (
 
 
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
+
+CONTROL_SOCKET = "/run/svxlink-lcd/control.sock"
 
 POLL_INTERVAL = 1.0
 BUTTON_INTERVAL = 0.05
@@ -420,6 +423,8 @@ class SvxLinkLCD:
             ]["favorites"][index]
 
             number = entry["number"]
+            action = "talkgroup"
+            value = number
 
             command = build_talkgroup_command(number)
             label = f"TG {number} {command}"
@@ -430,6 +435,8 @@ class SvxLinkLCD:
             modules = self.available_modules()
 
             entry = modules[index]
+            action = "module"
+            value = entry["name"]
 
             command = build_module_command(
                 entry["dtmf_id"]
@@ -443,6 +450,8 @@ class SvxLinkLCD:
         self.confirmation = {
             "label": label,
             "command": command,
+            "action": action,
+            "value": value,
             "acknowledged": False,
             "selected_port": (
                 self.status_data.get("selected_port")
@@ -456,25 +465,105 @@ class SvxLinkLCD:
             flush=True,
         )
 
+
+    def request_control_preview(self, action, value):
+        """
+        Send a preview request to the independent
+        SvxLink-LCD control service.
+
+        The service does not transmit DTMF.
+        """
+
+        request = {
+            "action": action,
+            "value": value,
+        }
+
+        with socket.socket(
+            socket.AF_UNIX,
+            socket.SOCK_STREAM,
+        ) as connection:
+
+            connection.settimeout(3.0)
+            connection.connect(CONTROL_SOCKET)
+
+            connection.sendall(
+                (
+                    json.dumps(request) + "\n"
+                ).encode("utf-8")
+            )
+
+            with connection.makefile(
+                "r",
+                encoding="utf-8",
+            ) as response:
+                result = json.loads(
+                    response.readline(4096)
+                )
+
+        if not isinstance(result, dict):
+            raise ValueError("Invalid control service response")
+
+        if not result.get("success"):
+            raise ValueError(
+                result.get("error", "Control preview failed")
+            )
+
+        if result.get("transmitted") is not False:
+            raise ValueError(
+                "Control service is not in preview mode"
+            )
+
+        return result
+
+
+
+
     def confirm_preview(self):
 
         if self.confirmation["acknowledged"]:
             return
 
-        command = self.confirmation["command"]
-        port = self.confirmation["selected_port"]
+        action = self.confirmation["action"]
+        value = self.confirmation["value"]
+        expected = self.confirmation["command"]
 
-        # IMPORTANT:
-        # This is deliberately log-only.
-        # No PTY is opened and send_dtmf is not called.
+        try:
+            result = self.request_control_preview(
+                action,
+                value,
+            )
+
+            if result.get("command") != expected:
+                raise ValueError(
+                    "Control service command mismatch"
+                )
+
+        except (
+            OSError,
+            ValueError,
+            TypeError,
+        ) as error:
+
+            print(
+                f"DTMF PREVIEW FAILED: {error}",
+                flush=True,
+            )
+
+            self.confirmation["label"] = "CONTROL ERROR"
+            self.confirmation["acknowledged"] = True
+            return
 
         print(
-            f"DTMF CONFIRMED (NOT SENT): "
-            f"command={command}, port={port}",
+            f"DTMF SOCKET PREVIEW: "
+            f"action={action}, "
+            f"command={expected}, "
+            f"transmitted=False",
             flush=True,
         )
 
         self.confirmation["acknowledged"] = True
+
 
     # ----------------------------------------------
     # Navigation
