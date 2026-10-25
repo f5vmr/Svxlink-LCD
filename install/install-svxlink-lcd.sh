@@ -138,6 +138,23 @@ else
 fi
 
 # ------------------------------------------------------------
+# Application ownership and service access
+# ------------------------------------------------------------
+
+echo "Configuring application permissions..."
+
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "${APP_DIR}"
+
+chmod 0755 "${APP_DIR}"
+
+# The control helper runs as svxlink and needs read access
+# to the application and its Python environment.
+if ! runuser -u svxlink -- test -r \
+    "${APP_DIR}/lcd_control_service.py"; then
+    echo "ERROR: svxlink cannot read the control service."
+    exit 1
+fi
+# ------------------------------------------------------------
 # Create or preserve Python virtual environment
 # ------------------------------------------------------------
 
