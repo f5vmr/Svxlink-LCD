@@ -2,25 +2,22 @@
 #!/usr/bin/env python3
 
 """
-SvxLink LCD Controller V0.2
+SvxLink LCD Controller V0.3
 
 Adafruit 16x2 RGB LCD Pi Plate
-Live monitoring via SvxLink-Dash V4.1.
+SvxLink-Dash V4.1 status API
 
-Read-only interactive status navigation.
+Hierarchical, read-only menu navigation.
 """
 
 import json
+import signal
 import time
 import urllib.request
 
 import board
 import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 
-
-# --------------------------------------------------
-# Configuration
-# --------------------------------------------------
 
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
 
@@ -30,18 +27,26 @@ BUTTON_INTERVAL = 0.05
 LCD_COLUMNS = 16
 LCD_ROWS = 2
 
-SCREENS = [
-    "HOME",
-    "RADIO",
-    "REFLECTOR",
-    "MODULES",
-    "SYSTEM",
+MAIN_MENU = [
+    ("TALKGROUPS", "talkgroups"),
+    ("MODULES", "modules"),
+    ("MACROS", "macros"),
+    ("NODE STATUS", "node"),
+    ("SYSTEM", "system"),
 ]
 
+NODE_MENU = [
+    ("RADIO", "radio"),
+    ("REFLECTOR", "reflector"),
+    ("SERVICE", "service"),
+]
 
-# --------------------------------------------------
-# LCD controller
-# --------------------------------------------------
+SYSTEM_MENU = [
+    ("IP ADDRESS", "ip"),
+    ("CPU TEMP", "temperature"),
+    ("UPTIME", "uptime"),
+]
+
 
 class SvxLinkLCD:
 
@@ -58,11 +63,15 @@ class SvxLinkLCD:
         self.lcd.color = [0, 100, 0]
         self.lcd.clear()
 
-        self.screen_index = 0
         self.previous_display = None
 
         self.status_data = {}
         self.api_available = False
+
+        # An empty stack represents the HOME screen.
+        # Each menu level retains its selected item.
+        self.menu_stack = []
+        self.detail = None
 
         self.previous_buttons = {
             "UP": False,
@@ -72,8 +81,10 @@ class SvxLinkLCD:
             "SELECT": False,
         }
 
+        self.running = True
+
     # ----------------------------------------------
-    # Display handling
+    # LCD display
     # ----------------------------------------------
 
     def format_line(self, value):
@@ -96,7 +107,7 @@ class SvxLinkLCD:
         self.previous_display = new_display
 
     # ----------------------------------------------
-    # API handling
+    # Dashboard API
     # ----------------------------------------------
 
     def fetch_status(self):
@@ -105,11 +116,10 @@ class SvxLinkLCD:
             API_URL,
             timeout=2,
         ) as response:
-
             data = json.load(response)
 
         if not isinstance(data, dict):
-            raise ValueError("Invalid dashboard API response")
+            raise ValueError("Invalid API response")
 
         if not isinstance(data.get("status"), dict):
             raise ValueError("Missing status object")
@@ -117,9 +127,242 @@ class SvxLinkLCD:
         self.status_data = data
         self.api_available = True
 
+    def get_status(self):
+        return self.status_data.get("status", {})
+
+    def get_system(self):
+        return self.status_data.get("system_info", {})
+
+    def get_radio(self):
+        return self.get_status().get("radio_state") or {}
+
+    def get_talkgroup(self):
+        return str(
+            self.get_status().get("active_talkgroup")
+            or "Standby"
+        )
+
+    def get_activity(self):
+
+        radio = self.get_radio()
+
+        if radio.get("tx", False):
+            return "TX"
+
+        if radio.get("rx", False):
+            return "RX"
+
+        return "IDLE"
+
+    def get_connection(self):
+
+        reflector = self.get_status().get(
+            "reflector", "Unknown"
+        )
+
+        if str(reflector).strip().lower() == "connected":
+            return "ONLINE"
+
+        return "OFFLINE"
+
+    # ----------------------------------------------
+    # Menu definitions
+    # ----------------------------------------------
+
+    def menu_items(self, menu_name):
+
+        if menu_name == "main":
+            return MAIN_MENU
+
+        if menu_name == "node":
+            return NODE_MENU
+
+        if menu_name == "system":
+            return SYSTEM_MENU
+
+        if menu_name == "talkgroups":
+            return [
+                ("CURRENT TG", "current_tg"),
+            ]
+
+        if menu_name == "macros":
+            return [
+                ("NOT CONFIGURED", "no_macros"),
+            ]
+
+        if menu_name == "modules":
+
+            modules = self.get_status().get("modules") or []
+
+            if not modules:
+                return [("NO MODULES", "no_modules")]
+
+            return [
+                (str(module), f"module:{index}")
+                for index, module in enumerate(modules)
+            ]
+
+        return []
+
+    def current_menu(self):
+
+        if not self.menu_stack:
+            return None
+
+        return self.menu_stack[-1]
+
     # ----------------------------------------------
     # Screen rendering
     # ----------------------------------------------
+
+    def render_home(self):
+
+        status = self.get_status()
+
+        callsign = status.get("callsign") or "UNKNOWN"
+        connection = self.get_connection()
+        talkgroup = self.get_talkgroup()
+        activity = self.get_activity()
+
+        self.display(
+            f"{callsign} {connection}",
+            f"TG {talkgroup} {activity}",
+        )
+
+    def render_menu(self):
+
+        menu = self.current_menu()
+
+        if menu is None:
+            self.render_home()
+            return
+
+        menu_name, index = menu
+        items = self.menu_items(menu_name)
+
+        if not items:
+            self.display(
+                menu_name.upper(),
+                "NO ITEMS",
+            )
+            return
+
+        index = min(index, len(items) - 1)
+        self.menu_stack[-1] = (menu_name, index)
+
+        label, _ = items[index]
+
+        titles = {
+            "main": "MAIN MENU",
+            "talkgroups": "TALKGROUPS",
+            "modules": "MODULES",
+            "macros": "MACROS",
+            "node": "NODE STATUS",
+            "system": "SYSTEM",
+        }
+
+        title = titles.get(menu_name, menu_name.upper())
+
+        self.display(
+            title,
+            f"> {label}",
+        )
+
+    def render_detail(self):
+
+        detail = self.detail
+        status = self.get_status()
+        system = self.get_system()
+        radio = self.get_radio()
+
+        if detail == "current_tg":
+
+            self.display(
+                "CURRENT TALKGROUP",
+                f"TG {self.get_talkgroup()}",
+            )
+
+        elif detail == "radio":
+
+            self.display(
+                f"RADIO {self.get_activity()}",
+                f"SQL {radio.get('input', 'Unknown')}",
+            )
+
+        elif detail == "reflector":
+
+            self.display(
+                f"REF {self.get_connection()}",
+                f"TG {self.get_talkgroup()}",
+            )
+
+        elif detail == "service":
+
+            service = status.get(
+                "service_status", "Unknown"
+            )
+
+            self.display(
+                "SVXLINK SERVICE",
+                str(service).upper(),
+            )
+
+        elif detail == "ip":
+
+            self.display(
+                "IP ADDRESS",
+                system.get("ip") or "Unknown",
+            )
+
+        elif detail == "temperature":
+
+            self.display(
+                "CPU TEMPERATURE",
+                system.get("cpu_temp") or "Unknown",
+            )
+
+        elif detail == "uptime":
+
+            self.display(
+                "SVXLINK UPTIME",
+                status.get("uptime") or "Unknown",
+            )
+
+        elif detail.startswith("module:"):
+
+            modules = status.get("modules") or []
+
+            try:
+                index = int(detail.split(":", 1)[1])
+                name = str(modules[index])
+            except (ValueError, IndexError, TypeError):
+                name = "Unavailable"
+
+            self.display(
+                "AVAILABLE MODULE",
+                name,
+            )
+
+        elif detail == "no_modules":
+
+            self.display(
+                "MODULES",
+                "NONE AVAILABLE",
+            )
+
+        elif detail == "no_macros":
+
+            self.display(
+                "MACROS",
+                "NOT CONFIGURED",
+            )
+
+        else:
+
+            self.display(
+                "SVXLINK LCD",
+                "UNKNOWN SCREEN",
+            )
 
     def render(self):
 
@@ -130,86 +373,14 @@ class SvxLinkLCD:
             )
             return
 
-        screen = SCREENS[self.screen_index]
+        if self.detail is not None:
+            self.render_detail()
 
-        status = self.status_data.get("status", {})
-        system = self.status_data.get("system_info", {})
-        radio = status.get("radio_state") or {}
+        elif self.menu_stack:
+            self.render_menu()
 
-        callsign = status.get("callsign") or "UNKNOWN"
-        reflector = status.get("reflector") or "Unknown"
-        talkgroup = str(
-            status.get("active_talkgroup") or "Standby"
-        )
-
-        rx = bool(radio.get("rx", False))
-        tx = bool(radio.get("tx", False))
-
-        if tx:
-            activity = "TX"
-        elif rx:
-            activity = "RX"
         else:
-            activity = "IDLE"
-
-        connection = (
-            "ONLINE"
-            if str(reflector).strip().lower() == "connected"
-            else "OFFLINE"
-        )
-
-        # HOME
-        if screen == "HOME":
-
-            self.display(
-                f"{callsign} {connection}",
-                f"TG {talkgroup} {activity}",
-            )
-
-        # RADIO
-        elif screen == "RADIO":
-
-            input_state = radio.get("input", "Unknown")
-
-            self.display(
-                f"RADIO {activity}",
-                f"SQL {input_state}",
-            )
-
-        # REFLECTOR
-        elif screen == "REFLECTOR":
-
-            self.display(
-                f"REF {connection}",
-                f"TG {talkgroup}",
-            )
-
-        # MODULES
-        elif screen == "MODULES":
-
-            modules = status.get("modules") or []
-
-            if modules:
-                self.display(
-                    "MODULES AVAILABLE",
-                    f"{len(modules)}: {modules[0]}",
-                )
-            else:
-                self.display(
-                    "MODULES",
-                    "NONE AVAILABLE",
-                )
-
-        # SYSTEM
-        elif screen == "SYSTEM":
-
-            ip_address = system.get("ip") or "Unknown"
-            cpu_temp = system.get("cpu_temp") or "Unknown"
-
-            self.display(
-                f"IP {ip_address}",
-                f"CPU {cpu_temp}",
-            )
+            self.render_home()
 
     # ----------------------------------------------
     # Button handling
@@ -225,6 +396,92 @@ class SvxLinkLCD:
             "SELECT": self.lcd.select_button,
         }
 
+    def move_selection(self, direction):
+
+        menu = self.current_menu()
+
+        if menu is None:
+            return
+
+        menu_name, index = menu
+        items = self.menu_items(menu_name)
+
+        if not items:
+            return
+
+        index = (index + direction) % len(items)
+
+        self.menu_stack[-1] = (menu_name, index)
+
+    def enter_selection(self):
+
+        if self.detail is not None:
+            return
+
+        if not self.menu_stack:
+            self.menu_stack.append(("main", 0))
+            return
+
+        menu_name, index = self.current_menu()
+        items = self.menu_items(menu_name)
+
+        if not items:
+            return
+
+        index = min(index, len(items) - 1)
+        _, target = items[index]
+
+        submenus = {
+            "talkgroups",
+            "modules",
+            "macros",
+            "node",
+            "system",
+        }
+
+        if target in submenus:
+            self.menu_stack.append((target, 0))
+        else:
+            self.detail = target
+
+    def go_back(self):
+
+        if self.detail is not None:
+            self.detail = None
+
+        elif self.menu_stack:
+            self.menu_stack.pop()
+
+    def handle_button(self, name):
+
+        if name == "LEFT":
+            self.go_back()
+
+        elif name in ("SELECT", "RIGHT"):
+            self.enter_selection()
+
+        elif self.detail is None:
+
+            if name == "UP":
+                self.move_selection(-1)
+
+            elif name == "DOWN":
+                self.move_selection(1)
+
+        menu = self.current_menu()
+        location = (
+            self.detail
+            if self.detail is not None
+            else menu[0] if menu else "HOME"
+        )
+
+        print(
+            f"Button: {name}, View: {location}",
+            flush=True,
+        )
+
+        self.render()
+
     def handle_buttons(self):
 
         current = self.read_buttons()
@@ -234,27 +491,7 @@ class SvxLinkLCD:
             was_pressed = self.previous_buttons[name]
 
             if pressed and not was_pressed:
-
-                if name == "UP":
-                    self.screen_index = (
-                        self.screen_index - 1
-                    ) % len(SCREENS)
-
-                elif name in ("DOWN", "RIGHT"):
-                    self.screen_index = (
-                        self.screen_index + 1
-                    ) % len(SCREENS)
-
-                elif name in ("LEFT", "SELECT"):
-                    self.screen_index = 0
-
-                print(
-                    f"Button: {name}, "
-                    f"Screen: {SCREENS[self.screen_index]}",
-                    flush=True,
-                )
-
-                self.render()
+                self.handle_button(name)
 
         self.previous_buttons = current
 
@@ -262,22 +499,30 @@ class SvxLinkLCD:
     # Main loop
     # ----------------------------------------------
 
+    def stop(self, signum, frame):
+        self.running = False
+
     def run(self):
 
-        print("SvxLink LCD Controller V0.2")
-        print(f"Dashboard API: {API_URL}")
-        print("Press Ctrl+C to stop.")
+        print(
+            "SvxLink LCD Controller V0.3",
+            flush=True,
+        )
+        print(
+            f"Dashboard API: {API_URL}",
+            flush=True,
+        )
 
         self.display(
-            "SVXLINK LCD V0.2",
+            "SVXLINK LCD V0.3",
             "INITIALISING",
         )
 
         next_poll = 0.0
+        error_reported = False
 
         try:
-
-            while True:
+            while self.running:
 
                 now = time.monotonic()
 
@@ -285,6 +530,7 @@ class SvxLinkLCD:
 
                     try:
                         self.fetch_status()
+                        error_reported = False
 
                     except (
                         OSError,
@@ -295,32 +541,37 @@ class SvxLinkLCD:
 
                         self.api_available = False
 
-                        print(
-                            f"Dashboard error: {error}",
-                            flush=True,
-                        )
+                        if not error_reported:
+                            print(
+                                f"Dashboard error: {error}",
+                                flush=True,
+                            )
+                            error_reported = True
 
                     self.render()
+
                     next_poll = (
-                        time.monotonic() + POLL_INTERVAL
+                        time.monotonic()
+                        + POLL_INTERVAL
                     )
 
                 self.handle_buttons()
-
                 time.sleep(BUTTON_INTERVAL)
-
-        except KeyboardInterrupt:
-            print("\nLCD controller stopped.")
 
         finally:
             self.lcd.clear()
 
+        print(
+            "LCD controller stopped.",
+            flush=True,
+        )
 
-# --------------------------------------------------
-# Program entry
-# --------------------------------------------------
 
 if __name__ == "__main__":
 
     controller = SvxLinkLCD()
+
+    signal.signal(signal.SIGTERM, controller.stop)
+    signal.signal(signal.SIGINT, controller.stop)
+
     controller.run()
