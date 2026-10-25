@@ -1,0 +1,14 @@
+
+[Unit]
+Description=SvxLink LCD Local DTMF Control Socket
+
+[Socket]
+ListenStream=/run/svxlink-lcd/control.sock
+SocketUser=svxlink
+SocketGroup=pi
+SocketMode=0660
+DirectoryMode=0755
+Service=svxlink-lcd-control.service
+
+[Install]
+WantedBy=sockets.target

@@ -149,10 +149,20 @@ def load_lcd_config(config_path=None):
     """
 
     if config_path is None:
-        config_path = (
+        system_config = Path(
+            "/etc/svxlink-lcd/lcd_config.json"
+        )
+
+        repository_config = (
             Path(__file__).resolve().parent
             / "config"
             / "lcd_config.json"
+        )
+
+        config_path = (
+            system_config
+            if system_config.exists()
+            else repository_config
         )
 
     with Path(config_path).open(

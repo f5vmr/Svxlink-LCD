@@ -1,0 +1,16 @@
+
+[Unit]
+Description=SvxLink LCD DTMF Control Helper
+Requires=svxlink-lcd-control.socket
+After=svxlink.service svxlink-lcd-control.socket
+
+[Service]
+Type=exec
+User=svxlink
+Group=svxlink
+WorkingDirectory=/opt/svxlink-lcd
+ExecStart=/opt/svxlink-lcd/venv/bin/python /opt/svxlink-lcd/lcd_control_service.py
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+Restart=no
