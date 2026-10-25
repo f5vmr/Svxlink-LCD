@@ -1,0 +1,44 @@
+
+{
+  "version": "0.4",
+  "control": {
+    "node_type": "simplex",
+    "selected_port": null,
+    "enabled_ports": []
+  },
+  "talkgroups": {
+    "prefix": "91",
+    "favorites": [
+      {
+        "name": "UK Wide",
+        "number": 235
+      },
+      {
+        "name": "Yorkshire",
+        "number": 234
+      },
+      {
+        "name": "Standby",
+        "number": 999
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "ModuleHelp",
+      "dtmf_id": 0
+    },
+    {
+      "name": "ModuleParrot",
+      "dtmf_id": 1
+    },
+    {
+      "name": "EchoLink",
+      "dtmf_id": 2
+    },
+    {
+      "name": "ModuleMetar",
+      "dtmf_id": 5
+    }
+  ]
+}

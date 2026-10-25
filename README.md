@@ -8,6 +8,25 @@ The project is intended to complement the existing SvxLink-Dash V4.1 browser int
 
 The initial implementation uses the Adafruit 16×2 RGB LCD Pi Plate, incorporating five navigation buttons and an MCP23017 I²C expander.
 
+## Supported SvxLink Node Types
+
+SvxLink-LCD is an optional, independent local monitoring and control interface designed for all SvxLink node configurations.
+
+It supports the following operating arrangements:
+
+- **SimplexLogic:** Conventional simplex nodes with RF transceivers.
+- **RepeaterLogic:** Repeater installations, including those using external repeater controllers.
+- **Radio-less nodes:** Installations operating through local or network-connected audio without an RF transceiver.
+- **Multi-port systems:** Installations using multiple independently configured radio ports.
+
+SvxLink-LCD obtains operating information through SvxLink-Dash V4.1 and is intended to reuse its established control mechanisms wherever possible.
+
+The LCD controller does not replace SvxLink-Dash. The browser dashboard remains responsible for configuration, hardware preparation and installation management.
+
+LCD functionality is optional and operates through a separate systemd service. Failure or removal of the LCD interface must not prevent normal SvxLink or dashboard operation.
+
+Control functions, including talkgroup selection, module activation and DTMF macros, will be introduced progressively and adapted to the capabilities of the configured node.
+
 ## 1. Project Status
 
 **Development version: V0.1 — Experimental**
