@@ -2,12 +2,12 @@
 #!/usr/bin/env python3
 
 """
-SvxLink LCD Controller V0.1
+SvxLink LCD Controller V0.2
 
 Adafruit 16x2 RGB LCD Pi Plate
-Reads live status from SvxLink-Dash V4.1.
+Live monitoring via SvxLink-Dash V4.1.
 
-Read-only monitoring.
+Read-only interactive status navigation.
 """
 
 import json
@@ -23,155 +23,297 @@ import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 # --------------------------------------------------
 
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
+
 POLL_INTERVAL = 1.0
+BUTTON_INTERVAL = 0.05
 
 LCD_COLUMNS = 16
 LCD_ROWS = 2
 
-
-# --------------------------------------------------
-# LCD initialisation
-# --------------------------------------------------
-
-i2c = board.I2C()
-
-lcd = character_lcd.Character_LCD_RGB_I2C(
-    i2c,
-    LCD_COLUMNS,
-    LCD_ROWS
-)
-
-lcd.color = [0, 100, 0]
-lcd.clear()
-
-previous_display = None
+SCREENS = [
+    "HOME",
+    "RADIO",
+    "REFLECTOR",
+    "MODULES",
+    "SYSTEM",
+]
 
 
 # --------------------------------------------------
-# Display handling
+# LCD controller
 # --------------------------------------------------
 
-def format_line(text):
-    """Restrict text to 16 characters."""
-    return str(text)[:LCD_COLUMNS].ljust(LCD_COLUMNS)
+class SvxLinkLCD:
 
+    def __init__(self):
 
-def display_lines(line1, line2):
-    """Update the LCD only when content changes."""
+        self.i2c = board.I2C()
 
-    global previous_display
+        self.lcd = character_lcd.Character_LCD_RGB_I2C(
+            self.i2c,
+            LCD_COLUMNS,
+            LCD_ROWS,
+        )
 
-    new_display = (
-        format_line(line1),
-        format_line(line2)
-    )
+        self.lcd.color = [0, 100, 0]
+        self.lcd.clear()
 
-    if new_display == previous_display:
-        return
+        self.screen_index = 0
+        self.previous_display = None
 
-    lcd.message = (
-        new_display[0]
-        + "\n"
-        + new_display[1]
-    )
+        self.status_data = {}
+        self.api_available = False
 
-    previous_display = new_display
+        self.previous_buttons = {
+            "UP": False,
+            "DOWN": False,
+            "LEFT": False,
+            "RIGHT": False,
+            "SELECT": False,
+        }
 
+    # ----------------------------------------------
+    # Display handling
+    # ----------------------------------------------
 
-# --------------------------------------------------
-# Dashboard status
-# --------------------------------------------------
+    def format_line(self, value):
+        return str(value)[:LCD_COLUMNS].ljust(LCD_COLUMNS)
 
-def fetch_status():
-    """Retrieve live status from SvxLink-Dash."""
+    def display(self, line1, line2):
 
-    with urllib.request.urlopen(
-        API_URL,
-        timeout=2
-    ) as response:
-        return json.load(response)
+        new_display = (
+            self.format_line(line1),
+            self.format_line(line2),
+        )
 
+        if new_display == self.previous_display:
+            return
 
-def process_status(data):
-    """Extract and display SvxLink state."""
+        self.lcd.message = (
+            new_display[0] + "\n" + new_display[1]
+        )
 
-    status = data.get("status", {})
+        self.previous_display = new_display
 
-    callsign = status.get("callsign", "UNKNOWN")
-    reflector = status.get("reflector", "Unknown")
-    talkgroup = str(
-        status.get("active_talkgroup", "Standby")
-    )
+    # ----------------------------------------------
+    # API handling
+    # ----------------------------------------------
 
-    radio = status.get("radio_state", {})
+    def fetch_status(self):
 
-    rx_active = radio.get("rx", False)
-    tx_active = radio.get("tx", False)
+        with urllib.request.urlopen(
+            API_URL,
+            timeout=2,
+        ) as response:
 
-    # Determine radio activity
+            data = json.load(response)
 
-    if tx_active:
-        activity = "TX"
-    elif rx_active:
-        activity = "RX"
-    else:
-        activity = "IDLE"
+        if not isinstance(data, dict):
+            raise ValueError("Invalid dashboard API response")
 
-    # Compact reflector indication
+        if not isinstance(data.get("status"), dict):
+            raise ValueError("Missing status object")
 
-    if str(reflector).lower() == "connected":
-        connection = "ONLINE"
-    else:
-        connection = "OFFLINE"
+        self.status_data = data
+        self.api_available = True
 
-    # Compose LCD lines
+    # ----------------------------------------------
+    # Screen rendering
+    # ----------------------------------------------
 
-    line1 = f"{callsign} {connection}"
+    def render(self):
 
-    if talkgroup.lower() == "standby":
-        line2 = f"TG STANDBY {activity}"
-    else:
-        line2 = f"TG {talkgroup} {activity}"
-
-    display_lines(line1, line2)
-
-
-# --------------------------------------------------
-# Main monitoring loop
-# --------------------------------------------------
-
-def main():
-
-    print("SvxLink LCD Controller V0.1")
-    print(f"Dashboard: {API_URL}")
-    print("Press Ctrl+C to stop.")
-
-    display_lines(
-        "SVXLINK LCD",
-        "INITIALISING"
-    )
-
-    while True:
-
-        try:
-            data = fetch_status()
-            process_status(data)
-
-        except (
-            OSError,
-            ValueError,
-            KeyError,
-            TypeError
-        ) as error:
-
-            display_lines(
+        if not self.api_available:
+            self.display(
                 "DASHBOARD ERROR",
-                "RECONNECTING"
+                "RECONNECTING",
+            )
+            return
+
+        screen = SCREENS[self.screen_index]
+
+        status = self.status_data.get("status", {})
+        system = self.status_data.get("system_info", {})
+        radio = status.get("radio_state") or {}
+
+        callsign = status.get("callsign") or "UNKNOWN"
+        reflector = status.get("reflector") or "Unknown"
+        talkgroup = str(
+            status.get("active_talkgroup") or "Standby"
+        )
+
+        rx = bool(radio.get("rx", False))
+        tx = bool(radio.get("tx", False))
+
+        if tx:
+            activity = "TX"
+        elif rx:
+            activity = "RX"
+        else:
+            activity = "IDLE"
+
+        connection = (
+            "ONLINE"
+            if str(reflector).strip().lower() == "connected"
+            else "OFFLINE"
+        )
+
+        # HOME
+        if screen == "HOME":
+
+            self.display(
+                f"{callsign} {connection}",
+                f"TG {talkgroup} {activity}",
             )
 
-            print(f"Dashboard error: {error}")
+        # RADIO
+        elif screen == "RADIO":
 
-        time.sleep(POLL_INTERVAL)
+            input_state = radio.get("input", "Unknown")
+
+            self.display(
+                f"RADIO {activity}",
+                f"SQL {input_state}",
+            )
+
+        # REFLECTOR
+        elif screen == "REFLECTOR":
+
+            self.display(
+                f"REF {connection}",
+                f"TG {talkgroup}",
+            )
+
+        # MODULES
+        elif screen == "MODULES":
+
+            modules = status.get("modules") or []
+
+            if modules:
+                self.display(
+                    "MODULES AVAILABLE",
+                    f"{len(modules)}: {modules[0]}",
+                )
+            else:
+                self.display(
+                    "MODULES",
+                    "NONE AVAILABLE",
+                )
+
+        # SYSTEM
+        elif screen == "SYSTEM":
+
+            ip_address = system.get("ip") or "Unknown"
+            cpu_temp = system.get("cpu_temp") or "Unknown"
+
+            self.display(
+                f"IP {ip_address}",
+                f"CPU {cpu_temp}",
+            )
+
+    # ----------------------------------------------
+    # Button handling
+    # ----------------------------------------------
+
+    def read_buttons(self):
+
+        return {
+            "UP": self.lcd.up_button,
+            "DOWN": self.lcd.down_button,
+            "LEFT": self.lcd.left_button,
+            "RIGHT": self.lcd.right_button,
+            "SELECT": self.lcd.select_button,
+        }
+
+    def handle_buttons(self):
+
+        current = self.read_buttons()
+
+        for name, pressed in current.items():
+
+            was_pressed = self.previous_buttons[name]
+
+            if pressed and not was_pressed:
+
+                if name == "UP":
+                    self.screen_index = (
+                        self.screen_index - 1
+                    ) % len(SCREENS)
+
+                elif name in ("DOWN", "RIGHT"):
+                    self.screen_index = (
+                        self.screen_index + 1
+                    ) % len(SCREENS)
+
+                elif name in ("LEFT", "SELECT"):
+                    self.screen_index = 0
+
+                print(
+                    f"Button: {name}, "
+                    f"Screen: {SCREENS[self.screen_index]}",
+                    flush=True,
+                )
+
+                self.render()
+
+        self.previous_buttons = current
+
+    # ----------------------------------------------
+    # Main loop
+    # ----------------------------------------------
+
+    def run(self):
+
+        print("SvxLink LCD Controller V0.2")
+        print(f"Dashboard API: {API_URL}")
+        print("Press Ctrl+C to stop.")
+
+        self.display(
+            "SVXLINK LCD V0.2",
+            "INITIALISING",
+        )
+
+        next_poll = 0.0
+
+        try:
+
+            while True:
+
+                now = time.monotonic()
+
+                if now >= next_poll:
+
+                    try:
+                        self.fetch_status()
+
+                    except (
+                        OSError,
+                        ValueError,
+                        KeyError,
+                        TypeError,
+                    ) as error:
+
+                        self.api_available = False
+
+                        print(
+                            f"Dashboard error: {error}",
+                            flush=True,
+                        )
+
+                    self.render()
+                    next_poll = (
+                        time.monotonic() + POLL_INTERVAL
+                    )
+
+                self.handle_buttons()
+
+                time.sleep(BUTTON_INTERVAL)
+
+        except KeyboardInterrupt:
+            print("\nLCD controller stopped.")
+
+        finally:
+            self.lcd.clear()
 
 
 # --------------------------------------------------
@@ -180,11 +322,5 @@ def main():
 
 if __name__ == "__main__":
 
-    try:
-        main()
-
-    except KeyboardInterrupt:
-        print("\nLCD controller stopped.")
-
-    finally:
-        lcd.clear()
+    controller = SvxLinkLCD()
+    controller.run()
