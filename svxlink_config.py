@@ -316,3 +316,96 @@ def get_monitored_talkgroups(config_path=SVXLINK_CONFIG):
         })
 
     return monitored
+
+def get_configured_macros(
+    config_path=SVXLINK_CONFIG,
+    logic_name=None,
+):
+    """
+    Discover macros belonging to the active SvxLink radio logic.
+
+    Preserve macro IDs as strings, including leading zeros.
+    This function never executes a macro.
+    """
+    import configparser
+
+    destinations = discover_dtmf_logics(config_path)
+
+    # Ensure the requested logic exists and reject
+    # ambiguous multi-logic installations.
+    select_dtmf_logic(destinations, logic_name)
+
+    if logic_name is not None:
+        active_logic = logic_name
+    else:
+        active_logic = next(iter(destinations))
+
+    parser = configparser.ConfigParser(
+        interpolation=None,
+        strict=False,
+    )
+    parser.optionxform = str
+
+    with open(config_path, encoding="utf-8") as handle:
+        parser.read_file(handle)
+
+    if not parser.has_section(active_logic):
+        raise ValueError(
+            f"Missing active logic section: {active_logic}"
+        )
+
+    macro_section = parser.get(
+        active_logic,
+        "MACROS",
+        fallback="",
+    ).strip()
+
+    if not macro_section:
+        return {
+            "logic": active_logic,
+            "prefix": "",
+            "macros": [],
+        }
+
+    if not parser.has_section(macro_section):
+        raise ValueError(
+            f"Missing macro section: {macro_section}"
+        )
+
+    prefix = parser.get(
+        active_logic,
+        "MACRO_PREFIX",
+        fallback="D",
+    ).strip()
+
+    if not prefix:
+        raise ValueError("Empty macro prefix")
+
+    macros = []
+
+    for macro_id, definition in parser.items(macro_section):
+
+        macro_id = macro_id.strip()
+        definition = definition.strip()
+
+        if not macro_id.isascii() or not macro_id.isdecimal():
+            raise ValueError(
+                f"Invalid macro ID: {macro_id}"
+            )
+
+        if not definition:
+            raise ValueError(
+                f"Empty macro definition: {macro_id}"
+            )
+
+        macros.append({
+            "id": macro_id,
+            "command": f"{prefix}{macro_id}#",
+            "definition": definition,
+        })
+
+    return {
+        "logic": active_logic,
+        "prefix": prefix,
+        "macros": macros,
+    }
