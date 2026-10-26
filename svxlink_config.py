@@ -250,3 +250,69 @@ def lookup_federation_talkgroup(talkgroup, directory_path=None):
             return entry.copy()
 
     return None
+
+def get_monitored_talkgroups(config_path=SVXLINK_CONFIG):
+    """
+    Read MONITOR_TGS from the configured ReflectorLogic.
+
+    Resolve each talkgroup against the federation directory.
+    Unknown talkgroups remain available by number.
+    """
+    import configparser
+
+    parser = configparser.ConfigParser(
+        interpolation=None,
+        strict=False,
+    )
+
+    parser.read(config_path)
+
+    if not parser.has_section("ReflectorLogic"):
+        return []
+
+    raw_value = parser.get(
+        "ReflectorLogic",
+        "MONITOR_TGS",
+        fallback="",
+    )
+
+    monitored = []
+    seen = set()
+
+    for item in raw_value.split(","):
+        value = item.strip()
+
+        if not value:
+            continue
+
+        if not value.isascii() or not value.isdecimal():
+            raise ValueError(
+                f"Invalid monitored talkgroup: {value}"
+            )
+
+        number = int(value)
+
+        if number <= 0:
+            raise ValueError(
+                f"Invalid monitored talkgroup: {value}"
+            )
+
+        if number in seen:
+            continue
+
+        seen.add(number)
+
+        directory_entry = lookup_federation_talkgroup(number)
+
+        monitored.append({
+            "tg": number,
+            "name": (
+                directory_entry["name"]
+                if directory_entry
+                else f"TG {number}"
+            ),
+            "source": "monitored",
+            "in_directory": directory_entry is not None,
+        })
+
+    return monitored
