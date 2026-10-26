@@ -1,347 +1,255 @@
 # SvxLink-LCD
 
-**An optional LCD monitoring and control interface for SvxLink and SvxLink-Dash V4.1.**
+**Optional local monitoring and control for SvxLink using an Adafruit 16×2 RGB LCD Pi Plate and SvxLink-Dash V4.1.**
 
-SvxLink-LCD provides a local operating interface using an I²C character display and navigation buttons.
+SvxLink-LCD adds a five-button, two-line LCD interface to an existing SvxLink node. It reads status from SvxLink-Dash V4.1 and, when explicitly authorised, sends restricted DTMF control commands to SvxLink. The dashboard remains the main configuration interface.
 
-The project is intended to complement the existing SvxLink-Dash V4.1 browser interface, not replace it.
+**Project status: V0.4 — experimental, operational single-logic installation tested.** On the development Raspberry Pi, LCD navigation, live talkgroup selection, monitored-TG discovery, persistent favourites, and confirmed favourite addition/removal have been demonstrated. These results do not establish full multiport control support.
 
-The initial implementation uses the Adafruit 16×2 RGB LCD Pi Plate, incorporating five navigation buttons and an MCP23017 I²C expander.
+## Supported arrangements and current limits
 
-## Supported SvxLink Node Types
+The design accommodates SimplexLogic, RepeaterLogic, radio-less nodes using an appropriate SvxLink logic, and installations with multiple ports. **Live control has been validated on one SimplexLogic installation with one active radio logic.** Repeater, radio-less and multiport hardware/control combinations require installation-specific validation; multiport DTMF destination selection is not yet enabled.
 
-SvxLink-LCD is an optional, independent local monitoring and control interface designed for all SvxLink node configurations.
+The LCD is independent of the normal audio, RF, reflector and dashboard operation. Removing or stopping `svxlink-lcd.service` should not interrupt those systems. The LCD does not replace the dashboard or edit `svxlink.conf`.
 
-It supports the following operating arrangements:
+## Hardware
 
-- **SimplexLogic:** Conventional simplex nodes with RF transceivers.
-- **RepeaterLogic:** Repeater installations, including those using external repeater controllers.
-- **Radio-less nodes:** Installations operating through local or network-connected audio without an RF transceiver.
-- **Multi-port systems:** Installations using multiple independently configured radio ports.
+The tested development configuration uses:
 
-SvxLink-LCD obtains operating information through SvxLink-Dash V4.1 and is intended to reuse its established control mechanisms wherever possible.
+- Raspberry Pi 3B running Debian 13 Trixie.
+- Adafruit 16×2 RGB LCD Pi Plate with five buttons, connected to the Raspberry Pi GPIO header.
+- An extension cable may be used to extend the panel to the front of a repeater for example.
+- MCP23017 I²C port expander at address `0x20`.
+- An existing working SvxLink installation and SvxLink-Dash V4.1.
+- Existing node audio and radio interfaces, which remain managed by SvxLink.
 
-The LCD controller does not replace SvxLink-Dash. The browser dashboard remains responsible for configuration, hardware preparation and installation management.
+Power off the Raspberry Pi before fitting or removing the plate. Check header alignment and clearance around the USB connectors.
 
-LCD functionality is optional and operates through a separate systemd service. Failure or removal of the LCD interface must not prevent normal SvxLink or dashboard operation.
-
-Control functions, including talkgroup selection, module activation and DTMF macros, will be introduced progressively and adapted to the capabilities of the configured node.
-
-## 1. Project Status
-
-**Development version: V0.1 — Experimental**
-
-The following functions have been successfully tested:
-
-- Raspberry Pi I²C communication.
-- Detection of the MCP23017 at address `0x20`.
-- LCD text display.
-- RGB backlight operation.
-- Detection of all five navigation buttons.
-- Interactive menu navigation using UP, DOWN and SELECT.
-- Retrieval of live SvxLink information through the SvxLink-Dash V4.1 API.
-- Display of live callsign, talkgroup and reflector information.
-
-These tests were performed on a Raspberry Pi 3B running Debian 13 Trixie with Python 3.13.
-
-The standalone V0.1 controller has not yet completed validation.
-
-## 2. Hardware Requirements
-
-The initial development hardware consists of:
-
-- Raspberry Pi 3B.
-- Adafruit 16×2 RGB LCD Pi Plate.
-- Existing USB sound card.
-- Working SvxLink installation.
-- SvxLink-Dash V4.1.
-
-The Adafruit Pi Plate connects to the first 26 pins of the Raspberry Pi GPIO header.
-
-It uses an MCP23017 I²C port expander, normally configured at address `0x20`.
-
-The display, RGB backlight and five navigation buttons are controlled through the I²C interface.
-
-**Important:** Always disconnect power before installing or removing the Pi Plate. Check connector alignment and clearance around the Raspberry Pi USB connectors.
-
-## 3. Software Prerequisites
-
-A working installation of SvxLink and SvxLink-Dash V4.1 is required for live node monitoring.
-
-The dashboard is expected to provide its status API on port 5000, unless configured otherwise.
-
-The LCD controller uses the existing Raspberry Pi Python 3 installation with additional Adafruit libraries installed into an isolated virtual environment.
-
-The LCD software must not interfere with the operation of SvxLink, its audio hardware or the browser dashboard.
-
-## 4. Enable I²C
-
-On the Raspberry Pi, run:
+### Prepare I²C
 
 ```bash
 sudo raspi-config
 ```
 
-Navigate to:
-
-**Interface Options → I2C → Enable**
-
-Exit `raspi-config` and reboot if requested.
-
-Install the I²C utilities:
+Choose **Interface Options → I2C → Enable**, then reboot if requested.
 
 ```bash
 sudo apt update
 sudo apt install -y i2c-tools
-```
-
-Verify that the I²C device is available:
-
-```bash
-ls -l /dev/i2c*
-```
-
-For the standard Raspberry Pi GPIO I²C interface, `/dev/i2c-1` should be present.
-
-## 5. Verify the Adafruit Pi Plate
-
-With the Pi Plate connected, run:
-
-```bash
+ls -l /dev/i2c-1
 sudo i2cdetect -y 1
 ```
 
-The expected MCP23017 address is:
+The Pi Plate should appear at `0x20`. If not, resolve I²C wiring/configuration before starting the LCD application.
 
-```text
-0x20
-```
+## Prerequisites
 
-If this address is not detected, check the I²C configuration, board connection and hardware before proceeding.
-
-Do not assume the LCD is available merely because I²C is enabled.
-
-## 6. Install Python Dependencies
-
-The initial development installation uses Python 3.13 on Debian 13 Trixie.
-
-Install the required Python development packages:
+Install and configure SvxLink and SvxLink-Dash V4.1 first. Confirm the dashboard status endpoint is available:
 
 ```bash
-sudo apt install -y \
-  python3-venv \
-  python3-dev
+curl -s 'http://127.0.0.1:5000/api/status?port=1' | python3 -m json.tool
 ```
 
-The Python development headers are important. Without them, some Adafruit dependencies may fail to compile with an error such as:
+Port `5000` and port selection `1` are the current controller defaults. Confirm the intended deployment uses this endpoint.
 
-```text
-fatal error: Python.h: No such file or directory
-```
+The installer currently expects a local account named `pi`, the service account `svxlink`, and a checkout at `/opt/svxlink-lcd`. It installs Python/venv/I²C dependencies and the Adafruit LCD library.
 
-On the tested Python 3.13 installation, the corresponding development package is:
+## Installation
+
+On the Raspberry Pi:
 
 ```bash
-sudo apt install -y python3.13-dev
-```
-
-The final installer should detect the installed Python version rather than assume Python 3.13 is present.
-
-## 7. Create the LCD Python Environment
-
-Create the application directory:
-
-```bash
+sudo apt install -y git
 sudo mkdir -p /opt/svxlink-lcd
 sudo chown pi:pi /opt/svxlink-lcd
+git clone https://github.com/f5vmr/Svxlink-LCD.git /opt/svxlink-lcd
+cd /opt/svxlink-lcd
+sudo bash install/install-svxlink-lcd.sh
 ```
 
-Create the virtual environment:
+For an existing checkout, do not clone again:
 
 ```bash
-python3 -m venv --system-site-packages \
-  /opt/svxlink-lcd/venv
+cd /opt/svxlink-lcd
+git pull --ff-only
+sudo bash install/install-svxlink-lcd.sh
 ```
 
-Install the official Adafruit library:
+The installer preserves existing `/etc/svxlink-lcd/lcd_config.json` and persistent talkgroups, prepares the virtual environment, and installs the following systemd units:
+
+- `svxlink-lcd.service` — LCD display and navigation, running as `pi`.
+- `svxlink-lcd-control.socket` — restricted Unix-domain control socket.
+- `svxlink-lcd-control.service` — privileged DTMF control helper, running as `svxlink` and started through the socket.
+
+Confirm operation:
 
 ```bash
-/opt/svxlink-lcd/venv/bin/python -m pip install \
-  adafruit-circuitpython-charlcd
+sudo systemctl status svxlink-lcd.service --no-pager
+sudo systemctl status svxlink-lcd-control.socket --no-pager
+sudo journalctl -u svxlink-lcd.service -n 30 --no-pager
 ```
 
-The installation also installs the necessary Python dependencies, including Adafruit Blinka and the MCP23017 support library.
+The control service may be socket-activated rather than continuously running until requested.
 
-The use of a virtual environment keeps these dependencies separate from the system Python packages used by SvxLink-Dash.
+### Updating an installed system
 
-## 8. Verify the Python Libraries
-
-Run:
+After a code-only update:
 
 ```bash
-/opt/svxlink-lcd/venv/bin/python - <<'PY'
-import board
-import busio
-import adafruit_character_lcd.character_lcd_rgb_i2c
-import adafruit_mcp230xx
-import adafruit_bus_device
+cd /opt/svxlink-lcd
+git pull --ff-only
+sudo systemctl restart svxlink-lcd-control.service
+sudo systemctl restart svxlink-lcd.service
+```
 
-print("Adafruit LCD Python libraries available")
+Rerun the installer when installation units, dependencies, or filesystem setup change. The operational configuration and favourites are intended to survive upgrades.
+
+## Configuration and data files
+
+| Path | Purpose |
+|---|---|
+| `/opt/svxlink-lcd/config/lcd_config.json` | Repository's initial/default node configuration |
+| `/etc/svxlink-lcd/lcd_config.json` | Preserved operational node and control configuration |
+| `/opt/svxlink-lcd/config/federation_talkgroups.json` | Bundled reference directory of 131 federation TGs |
+| `/var/lib/svxlink-lcd/talkgroups.json` | Persistent favourites, including entries added from the LCD |
+| `/etc/svxlink/svxlink.conf` | Existing SvxLink configuration; read to discover monitored TGs and DTMF control PTYs |
+
+**Do not edit the repository template to manage day-to-day favourites.** The installer creates the operational favourites store from initial configuration only if it is absent; later additions and removals are managed through the LCD.
+
+The tested storage permissions are directory `pi:svxlink` with mode `2750` (setgid), and favourites file `pi:svxlink` with mode `0640`. The display service can update the file; the restricted control helper can read it.
+
+### Enable or disable live DTMF control
+
+The operational configuration contains a `control` object, for example:
+
+```json
+"control": {
+  "node_type": "simplex",
+  "selected_port": null,
+  "enabled_ports": [],
+  "transmission_enabled": true
+}
+```
+
+This is an **excerpt** from the JSON file, not a complete standalone JSON document. `transmission_enabled` must be a JSON boolean and is spelled **singular**. Omitting it defaults to disabled. Set it to `false` for preview-only operation.
+
+Live transmission also requires the control-service's `ENABLE_DTMF_TRANSMISSION` switch, matching node logic, a supported unambiguous DTMF destination and successful runtime PTY validation. The helper does not accept arbitrary DTMF strings. Do not change unrelated SvxLink settings merely to enable the LCD.
+
+Validate a configuration change with:
+
+```bash
+python3 -m json.tool /etc/svxlink-lcd/lcd_config.json > /dev/null
+sudo systemctl restart svxlink-lcd-control.service
+```
+
+## LCD operation
+
+The five buttons are **UP**, **DOWN**, **LEFT**, **RIGHT** and **SELECT**. The 16×2 display shows live node/reflector information and menus.
+
+- **UP / DOWN:** Move among menu items when no confirmation is active.
+- **SELECT:** Enter a menu or explicitly confirm a prepared command or file operation.
+- **RIGHT:** Enter a menu, or offer to save a newly connected monitored TG when eligible.
+- **LEFT:** Cancel or return to the previous menu.
+
+### Talkgroup selection
+
+Under **TALKGROUPS**, saved favourites appear first. Additional monitored TGs that are not already favourites are also listed. Entries use their actual TG numbers rather than list positions.
+
+Selecting a TG prepares a DTMF command; for example, TG 23548 produces `9123548#`. Press **SELECT** again to confirm transmission. An acknowledged command cannot be transmitted a second time simply by pressing SELECT repeatedly. The dashboard can subsequently confirm the active TG.
+
+The privileged control service authorises a requested TG only if it is in the persisted favourites or in SvxLink's configured `MONITOR_TGS`. Its numeric presence in the federation directory alone does not authorise transmission.
+
+### Monitored TGs and the federation directory
+
+The controller reads the existing `[ReflectorLogic]` setting, for example:
+
+```ini
+MONITOR_TGS=23560,23548
+```
+
+The bundled 131-entry federation directory provides names for known numbers. An unknown monitored number can still appear under a generic label such as `TG 23548`. The directory is a reference list, not the live monitored-TG state and not a guarantee that a reflector will accept a TG.
+
+### Add a monitored TG to favourites
+
+1. Select a monitored TG that is not already saved.
+2. Confirm the DTMF connection with SELECT.
+3. On successful transmission, the LCD offers `RIGHT=SAVE`.
+4. Press RIGHT to display `SAVE TG <number>?`.
+5. Press SELECT to write the favourite, or LEFT to cancel.
+
+Saving is a local JSON operation; it does **not** send another DTMF command. An existing favourite does not receive a save prompt and cannot be duplicated.
+
+### Remove a favourite
+
+1. Open **TALKGROUPS → MANAGE FAVS**.
+2. Select the saved favourite.
+3. Confirm `REMOVE TG <number>?` with SELECT; LEFT cancels.
+4. The entry is deleted from `/var/lib/svxlink-lcd/talkgroups.json`.
+
+Removal does **not** transmit DTMF or modify `MONITOR_TGS`, the federation directory, or the currently connected TG. If the TG remains monitored it will still appear in the normal TALKGROUPS menu.
+
+### Modules and other menus
+
+The MODULES menu displays configured/available modules. Module activation uses explicitly configured DTMF IDs rather than their position in the list and passes through the same restricted confirmation service. NODE STATUS and SYSTEM provide operating information from the dashboard. MACROS currently displays **NOT CONFIGURED**; arbitrary user-defined macro execution has not been implemented.
+
+## Diagnostic commands
+
+```bash
+sudo systemctl is-active svxlink-lcd.service
+sudo systemctl status svxlink-lcd-control.socket --no-pager
+sudo journalctl -u svxlink-lcd.service -n 50 --no-pager
+sudo journalctl -u svxlink-lcd-control.service -n 50 --no-pager
+```
+
+Inspect favourites and monitored TGs without changing them:
+
+```bash
+cd /opt/svxlink-lcd
+
+python3 - <<'PY'
+from talkgroup_store import load_favourites
+from svxlink_config import get_monitored_talkgroups
+
+print("Favourites:", load_favourites())
+print("Monitored:", get_monitored_talkgroups())
 PY
 ```
 
-The expected output is:
-
-```text
-Adafruit LCD Python libraries available
-```
-
-## 9. Test the LCD Display
-
-Run:
+If saving fails with `Operation not permitted` while replacing a `.talkgroups-*.json` file, verify the storage directory has the setgid bit (`drwxr-s---`) and ownership `pi:svxlink`:
 
 ```bash
-/opt/svxlink-lcd/venv/bin/python - <<'PY'
-import board
-import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
-
-lcd = character_lcd.Character_LCD_RGB_I2C(
-    board.I2C(), 16, 2
-)
-
-lcd.clear()
-lcd.color = [0, 100, 0]
-lcd.message = "SVXLINK LCD TEST\nG4NAB READY"
-
-print("LCD initialised and message sent")
-PY
+ls -ld /var/lib/svxlink-lcd
+ls -l /var/lib/svxlink-lcd/talkgroups.json
 ```
 
-The display should illuminate and show two lines of text.
+Do not make these files world-writable.
 
-The callsign in this example is illustrative and may be changed.
+If the LCD displays `DASHBOARD ERROR`, first check the configured dashboard API. If a control operation reports an error, inspect the control-service logs and the existing SvxLink DTMF PTY configuration before repeating transmission.
 
-## 10. Test the Five Navigation Buttons
+## Current scope and future work
 
-The Adafruit library exposes these properties:
+**Verified in this development:** I²C LCD and five-button operation; dashboard status display; single SimplexLogic live TG command; monitored-TG discovery; 131-TG federation lookup; persistent favourites; add, remove, duplicate prevention and permission-safe updates; restricted Unix socket control.
 
-```python
-lcd.up_button
-lcd.down_button
-lcd.left_button
-lcd.right_button
-lcd.select_button
-```
+**Not yet claimed as fully validated:** multiport live DTMF control and explicit port selection; broader repeater/radio-less deployment testing; user-defined DTMF macros; microphone/handset integrations; alternative display hardware. These are future development or installation-specific work.
 
-All five buttons have been successfully tested on the development hardware.
+## Design principles
 
-The buttons will eventually provide menu navigation, talkgroup selection, module activation and access to stored commands.
+1. SvxLink continues operating independently of the LCD.
+2. SvxLink-Dash V4.1 remains responsible for browser configuration and status.
+3. LCD control is restricted, explicitly confirmed and disabled unless authorised.
+4. Favourites survive software updates without changing the bundled federation directory.
+5. Local add/remove operations never send DTMF.
+6. All development is tested first before deployment to physical nodes.
 
-These control functions are not yet implemented in the standalone controller.
+## References and credits
 
-## 11. SvxLink-Dash V4.1 Integration
-
-The LCD controller obtains live operating information from the existing dashboard API.
-
-The default single-port endpoint is:
-
-```text
-http://127.0.0.1:5000/api/status?port=1
-```
-
-Verify the endpoint using:
-
-```bash
-curl -s \
-  'http://127.0.0.1:5000/api/status?port=1' \
-  | python3 -m json.tool
-```
-
-Available information includes:
-
-- Callsign.
-- Active talkgroup.
-- Reflector connection status.
-- Receiver and transmitter activity.
-- SvxLink service status.
-- Available modules.
-- EchoLink status.
-- System information.
-
-The dashboard remains the source of operating information.
-
-The initial LCD controller is read-only and does not send commands to SvxLink.
-
-## 12. Display Design
-
-The display provides 16 characters across two lines.
-
-A typical home screen might be:
-
-```text
-G4NAB ONLINE
-TG 235 IDLE
-```
-
-The intended display logic includes:
-
-- Live status polling.
-- Updating the display only when information changes.
-- Compact operating-state information.
-- Temporary error indications when the dashboard is unavailable.
-- Navigation between information screens.
-
-The five buttons will eventually support interactive menus.
-
-## 13. Planned Development
-
-Future work may include:
-
-- Talkgroup favourites and selection.
-- Module activation.
-- User-defined DTMF macros.
-- Macro editing and execution.
-- Local command feedback.
-- Microphone DTMF integration.
-- Additional hardware and display support.
-- Optional systemd service installation.
-- Automated installation and removal.
-
-These functions remain proposals and are not claimed as implemented.
-
-The project may eventually support radio-less SvxLink nodes with a local microphone, speaker and operating console.
-
-No particular microphone, sound card or final hardware product has been selected.
-
-## 14. Development Principles
-
-SvxLink-LCD is intended to be an optional addition to an existing installation.
-
-The following principles apply:
-
-1. SvxLink remains operational without the LCD.
-2. SvxLink-Dash V4.1 remains fully accessible through the browser.
-3. LCD hardware is detected before attempting to initialise it.
-4. The LCD controller does not alter SvxLink configuration automatically.
-5. Hardware failures must not interrupt SvxLink or the dashboard.
-6. Existing status and command interfaces should be reused wherever possible.
-7. Development changes should be independently tested before integration.
-
-## 15. References
-
-- [Adafruit 16×2 LCD Pi Plate Guide](https://learn.adafruit.com/adafruit-16x2-character-lcd-plus-keypad-for-raspberry-pi)
-- [Adafruit CircuitPython CharLCD](https://github.com/adafruit/Adafruit_CircuitPython_CharLCD)
 - [SvxLink](https://www.svxlink.org/)
 - [SvxLink-Dash V4.1](https://github.com/f5vmr/SvxLink-Dash-V4.1)
+- [Adafruit 16×2 LCD Pi Plate guide](https://learn.adafruit.com/adafruit-16x2-character-lcd-plus-keypad-for-raspberry-pi)
+- [Adafruit CircuitPython CharLCD](https://github.com/adafruit/Adafruit_CircuitPython_CharLCD)
 
-## Credits
+**Tobias Blomberg, SM0SVX** — original SvxLink author.
 
-**Tobias Blomberg, SM0SVX** — Original author of SvxLink.
+**Chris Jackson, G4NAB** — SvxLink-Dash and SvxLink-LCD development.
 
-**Chris Jackson, G4NAB** — SvxLink-Dash and SvxLink-LCD project development.
-
-Adafruit Industries — Original LCD Pi Plate hardware and CircuitPython software libraries.
-
----
-
-**Project status:** Experimental development. The initial hardware and live dashboard display tests have been completed successfully.
+**Adafruit Industries** — LCD Pi Plate hardware and CircuitPython libraries.
