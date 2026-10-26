@@ -29,10 +29,12 @@ from svxlink_config import (
     select_dtmf_logic,
     validate_dtmf_destination,
     validate_runtime_pty,
+    get_monitored_talkgroups,
+    get_configured_macros,
 )
 
 from talkgroup_store import load_favourites
-from svxlink_config import get_monitored_talkgroups
+
 
 # Safety default: no DTMF transmission.
 ENABLE_DTMF_TRANSMISSION = True
@@ -152,6 +154,42 @@ def process_request(request, config):
         command = build_module_command(
             matching[0]["dtmf_id"]
         )
+
+    elif action == "macro":
+
+        # Macro identifiers are strings.
+        # Leading zeros must be preserved.
+        if (
+            type(value) is not str
+            or not value
+            or not value.isascii()
+            or not value.isdecimal()
+        ):
+            raise ValueError(
+                "Invalid macro identifier"
+            )
+
+        # Read the actual SvxLink configuration.
+        # Do not trust macro definitions supplied
+        # through the control socket.
+        macro_config = get_configured_macros()
+
+        matching = [
+            entry
+            for entry in macro_config["macros"]
+            if entry["id"] == value
+        ]
+
+        if not matching:
+            raise ValueError(
+                "Macro is not configured"
+            )
+
+        # The macro invocation is constructed by
+        # the trusted configuration parser.
+        # Its definition is executed by SvxLink,
+        # not by the LCD control service.
+        command = matching[0]["command"]
 
     else:
         raise ValueError(
