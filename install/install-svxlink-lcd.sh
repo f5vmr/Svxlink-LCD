@@ -331,7 +331,8 @@ systemctl --no-pager --full status \
 
 echo
 echo "Application: ${APP_DIR}"
-echo "Configuration: ${APP_DIR}/config/lcd_config.json"
+echo "Configuration: ${CONFIG_FILE}"
+echo "Favourites: ${FAVOURITES_FILE}"
 echo "Service: ${SERVICE_NAME}"
 echo
 
@@ -341,5 +342,5 @@ echo
 echo "NOTE: Ensure I2C is enabled and the LCD plate"
 echo "is connected before using the display."
 echo
-echo "DTMF control remains in preview-only mode."
+echo "DTMF transmission is governed by the operational configuration."
 echo
