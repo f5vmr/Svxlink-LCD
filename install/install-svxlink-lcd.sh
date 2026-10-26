@@ -232,6 +232,53 @@ print("Configured node type:",
 PY
 
 # ------------------------------------------------------------
+# Prepare persistent talkgroup favourites
+# ------------------------------------------------------------
+
+FAVOURITES_DIR="/var/lib/svxlink-lcd"
+FAVOURITES_FILE="${FAVOURITES_DIR}/talkgroups.json"
+
+echo "Preparing persistent talkgroup favourites..."
+
+install -d -o pi -g pi -m 0750 \
+    "${FAVOURITES_DIR}"
+
+if [[ ! -e "${FAVOURITES_FILE}" ]]; then
+
+    sudo -u pi \
+        "${VENV_DIR}/bin/python" - \
+        "${CONFIG_FILE}" \
+        "${FAVOURITES_FILE}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+store_path = Path(sys.argv[2])
+
+with config_path.open(encoding="utf-8") as handle:
+    config = json.load(handle)
+
+favourites = config["talkgroups"]["favorites"]
+
+# Exclusive creation prevents overwriting an existing
+# favourites database.
+with store_path.open("x", encoding="utf-8") as handle:
+    json.dump({"favorites": favourites}, handle, indent=2)
+    handle.write("\n")
+
+store_path.chmod(0o640)
+
+print(f"Created {store_path}")
+PY
+
+else
+
+    echo "Preserving existing ${FAVOURITES_FILE}"
+
+fi
+
+# ------------------------------------------------------------
 # Install systemd service
 # ------------------------------------------------------------
 
