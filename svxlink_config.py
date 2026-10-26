@@ -10,6 +10,9 @@ transmitting commands.
 """
 
 import configparser
+import os
+import pwd
+import stat
 from pathlib import Path
 
 
@@ -160,3 +163,53 @@ def select_dtmf_logic(destinations, logic_name=None):
         "Multiple radio logics require explicit selection"
     )
 
+
+
+def validate_runtime_pty(pty_path):
+    """
+    Verify a configured SvxLink DTMF control PTY.
+
+    Checks:
+      - The configured path is a symbolic link.
+      - Its resolved target is under /dev/pts.
+      - The target is a character device.
+      - The target is owned by svxlink.
+      - The current process has write permission.
+
+    Does not open the PTY or transmit DTMF.
+    """
+
+    path = Path(pty_path)
+
+    if not path.is_symlink():
+        raise ValueError(
+            f"DTMF control path is not a symlink: {path}"
+        )
+
+    target = path.resolve(strict=True)
+
+    if target.parent != Path("/dev/pts"):
+        raise ValueError(
+            f"Unexpected DTMF PTY target: {target}"
+        )
+
+    device = target.stat()
+
+    if not stat.S_ISCHR(device.st_mode):
+        raise ValueError(
+            f"DTMF target is not a character device: {target}"
+        )
+
+    svxlink_uid = pwd.getpwnam("svxlink").pw_uid
+
+    if device.st_uid != svxlink_uid:
+        raise ValueError(
+            f"DTMF PTY is not owned by svxlink: {target}"
+        )
+
+    if not os.access(target, os.W_OK):
+        raise PermissionError(
+            f"DTMF PTY is not writable: {target}"
+        )
+
+    return str(target)
