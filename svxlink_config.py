@@ -213,3 +213,40 @@ def validate_runtime_pty(pty_path):
         )
 
     return str(target)
+
+def lookup_federation_talkgroup(talkgroup, directory_path=None):
+    """
+    Look up a talkgroup in the bundled federation directory.
+
+    Returns the matching dictionary, or None if the TG
+    is not present.
+    """
+    import json
+    from pathlib import Path
+
+    if directory_path is None:
+        directory_path = (
+            Path(__file__).resolve().parent
+            / "config"
+            / "federation_talkgroups.json"
+        )
+
+    if isinstance(talkgroup, bool):
+        raise ValueError("Invalid talkgroup number")
+
+    try:
+        tg_number = int(talkgroup)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid talkgroup number") from exc
+
+    if tg_number <= 0:
+        raise ValueError("Invalid talkgroup number")
+
+    with Path(directory_path).open(encoding="utf-8") as handle:
+        directory = json.load(handle)
+
+    for entry in directory["talkgroups"]:
+        if entry["tg"] == tg_number:
+            return entry.copy()
+
+    return None
