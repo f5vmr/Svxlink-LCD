@@ -10,6 +10,9 @@ validation or path-resolution functions.
 
 from pathlib import Path
 import json
+import os
+import pwd
+import stat
 import re
 
 
@@ -274,5 +277,75 @@ def send_dtmf(
         encoding="utf-8",
     ) as handle:
         handle.write(command)
+
+    return command
+
+
+def write_validated_dtmf(command, configured_pty):
+    """
+    Write DTMF to a validated SvxLink control PTY.
+
+    The opened file descriptor is checked before writing.
+
+    WARNING:
+    Calling this function transmits real DTMF.
+    """
+
+    command = validate_dtmf(command)
+
+    from svxlink_config import validate_runtime_pty
+
+    # Resolve and validate the current PTY.
+    target = validate_runtime_pty(configured_pty)
+
+    # Open the actual device, not the symbolic link.
+    fd = os.open(
+        target,
+        os.O_WRONLY | os.O_NOCTTY | os.O_NONBLOCK,
+    )
+
+    try:
+        device = os.fstat(fd)
+
+        svxlink_uid = pwd.getpwnam("svxlink").pw_uid
+
+        if not stat.S_ISCHR(device.st_mode):
+            raise ValueError(
+                "Opened DTMF target is not a character device"
+            )
+
+        if device.st_uid != svxlink_uid:
+            raise PermissionError(
+                "Opened DTMF target has an unexpected owner"
+            )
+
+        # Verify that the configured link still resolves
+        # to the same device after opening.
+        current_target = validate_runtime_pty(
+            configured_pty
+        )
+
+        current_device = os.stat(current_target)
+
+        if (
+            device.st_dev != current_device.st_dev
+            or device.st_ino != current_device.st_ino
+            or device.st_rdev != current_device.st_rdev
+        ):
+            raise RuntimeError(
+                "SvxLink DTMF PTY changed during validation"
+            )
+
+        payload = command.encode("ascii")
+
+        written = os.write(fd, payload)
+
+        if written != len(payload):
+            raise OSError(
+                "Incomplete DTMF command write"
+            )
+
+    finally:
+        os.close(fd)
 
     return command

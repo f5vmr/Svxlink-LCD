@@ -23,13 +23,18 @@ from dtmf_control import (
     build_module_command,
     build_talkgroup_command,
     load_lcd_config,
+    write_validated_dtmf,
 )
 
 from svxlink_config import (
     discover_dtmf_logics,
     select_dtmf_logic,
     validate_dtmf_destination,
+    validate_runtime_pty,
 )
+
+# Safety default: no DTMF transmission.
+ENABLE_DTMF_TRANSMISSION = False
 
 def discover_control_destination(logic_name=None, config_path=None):
     """
@@ -139,13 +144,29 @@ def process_request(request, config):
 
     destination = discover_control_destination()
 
+    # Validate the actual SvxLink PTY before accepting
+    # this command preview. No DTMF is transmitted.
+    resolved_pty = validate_runtime_pty(
+        destination["pty"]
+    )
+
+    transmitted = False
+
+    if ENABLE_DTMF_TRANSMISSION:
+        write_validated_dtmf(
+            command,
+            destination["pty"],
+        )
+        transmitted = True
+
     return {
         "success": True,
         "action": action,
         "command": command,
         "logic": destination["logic"],
         "pty": destination["pty"],
-        "transmitted": False,
+        "resolved_pty": resolved_pty,
+        "transmitted": transmitted,
     }
 
 
