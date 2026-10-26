@@ -147,3 +147,29 @@ def add_favourite(
     save_favourites(favourites, store_path)
 
     return True
+
+def remove_favourite(number, store_path=DEFAULT_STORE):
+    """
+    Remove one favourite by its talkgroup number.
+
+    Returns True if removed, False if not present.
+    Does not modify SvxLink or transmit DTMF.
+    """
+
+    build_talkgroup_command(number)
+
+    number = int(number)
+    favourites = load_favourites(store_path)
+
+    remaining = [
+        entry
+        for entry in favourites
+        if entry["number"] != number
+    ]
+
+    if len(remaining) == len(favourites):
+        return False
+
+    save_favourites(remaining, store_path)
+
+    return True
