@@ -34,7 +34,7 @@ from svxlink_config import (
 )
 
 # Safety default: no DTMF transmission.
-ENABLE_DTMF_TRANSMISSION = False
+ENABLE_DTMF_TRANSMISSION = True
 
 def discover_control_destination(logic_name=None, config_path=None):
     """
