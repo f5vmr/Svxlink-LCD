@@ -27,7 +27,7 @@ from dtmf_control import (
     load_lcd_config,
 )
 
-from talkgroup_store import load_favourites, add_favourite
+from talkgroup_store import (load_favourites, add_favourite, remove_favourite,)
 from svxlink_config import get_monitored_talkgroups
 from svxlink_config import  lookup_federation_talkgroup
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
@@ -86,6 +86,7 @@ class SvxLinkLCD:
         self.detail = None
         self.confirmation = None
         self.save_favourite = None
+        self.remove_favourite_state = None
         self.previous_buttons = {
             "UP": False,
             "DOWN": False,
@@ -258,7 +259,23 @@ class SvxLinkLCD:
                         f"tg:{entry['tg']}",
                     ))
 
+            items.append(
+                ("MANAGE FAVS", "manage_favourites")
+            )
+
             return items
+
+        if menu_name == "manage_favourites":
+
+            favourites = load_favourites()
+
+            return [
+                (
+                    f"{entry['name']} {entry['number']}",
+                    f"remove_tg:{entry['number']}",
+                )
+                for entry in favourites
+            ]
 
         if menu_name == "modules":
 
@@ -321,6 +338,7 @@ class SvxLinkLCD:
         titles = {
             "main": "MAIN MENU",
             "talkgroups": "TALKGROUPS",
+            "manage_favourites": "MANAGE FAVS",
             "modules": "MODULES",
             "macros": "MACROS",
             "node": "NODE STATUS",
@@ -331,6 +349,38 @@ class SvxLinkLCD:
             titles.get(menu_name, menu_name.upper()),
             f"> {label}",
         )
+
+
+    def render_remove_favourite(self):
+
+        state = self.remove_favourite_state
+        number = state["number"]
+
+        if state["acknowledged"]:
+
+            if state["error"]:
+                self.display(
+                    "REMOVE ERROR",
+                    "LEFT=BACK",
+                )
+
+            elif state["removed"]:
+                self.display(
+                    "FAV REMOVED",
+                    f"TG {number}",
+                )
+
+            else:
+                self.display(
+                    "NOT A FAVOURITE",
+                    f"TG {number}",
+                )
+
+        else:
+            self.display(
+                f"REMOVE TG {number}?",
+                "SEL=YES LEFT=NO",
+            )
 
 
     def render_save_favourite(self):
@@ -470,6 +520,10 @@ class SvxLinkLCD:
 
         # Local favourites operations do not depend
         # on Dashboard API availability.
+        if self.remove_favourite_state is not None:
+            self.render_remove_favourite()
+            return
+
         if self.save_favourite is not None:
             self.render_save_favourite()
             return
@@ -617,6 +671,48 @@ class SvxLinkLCD:
             )
 
         return result
+
+    def begin_remove_favourite(self, number):
+        """Prepare a favourite removal without changing storage."""
+
+        number = int(number)
+
+        if not any(
+            entry["number"] == number
+            for entry in load_favourites()
+        ):
+            raise ValueError(
+                f"Talkgroup {number} is not a favourite"
+            )
+
+        self.remove_favourite_state = {
+            "number": number,
+            "acknowledged": False,
+            "removed": False,
+            "error": False,
+        }
+
+    def confirm_remove_favourite(self):
+        """Remove a favourite without transmitting DTMF."""
+
+        state = self.remove_favourite_state
+
+        if state is None or state["acknowledged"]:
+            return
+
+        try:
+            state["removed"] = remove_favourite(
+                state["number"]
+            )
+
+        except (OSError, ValueError, KeyError) as error:
+            print(
+                f"FAVOURITE REMOVE FAILED: {error}",
+                flush=True,
+            )
+            state["error"] = True
+
+        state["acknowledged"] = True
 
     def begin_save_favourite(self):
         """Offer to save a successfully selected monitored TG."""
@@ -767,6 +863,10 @@ class SvxLinkLCD:
 
     def enter_selection(self):
 
+        if self.remove_favourite_state is not None:
+            self.confirm_remove_favourite()
+            return
+
         if self.save_favourite is not None:
             self.confirm_save_favourite()
             return
@@ -793,6 +893,7 @@ class SvxLinkLCD:
 
         submenus = {
             "talkgroups",
+            "manage_favourites",
             "modules",
             "macros",
             "node",
@@ -802,6 +903,10 @@ class SvxLinkLCD:
         if target in submenus:
             self.menu_stack.append((target, 0))
 
+        elif target.startswith("remove_tg:"):
+            number = int(target.split(":", 1)[1])
+            self.begin_remove_favourite(number)
+
         elif target.startswith(("tg:", "module:")):
             self.prepare_command(target)
 
@@ -809,8 +914,10 @@ class SvxLinkLCD:
             self.detail = target
 
     def go_back(self):
+        if self.remove_favourite_state is not None:
+            self.remove_favourite_state = None
 
-        if self.save_favourite is not None:
+        elif self.save_favourite is not None:
             self.save_favourite = None
 
         elif self.confirmation is not None:
@@ -832,7 +939,10 @@ class SvxLinkLCD:
             if self.confirmation is not None:
                 self.begin_save_favourite()
 
-            elif self.save_favourite is None:
+            elif (
+                self.save_favourite is None
+                and self.remove_favourite_state is None
+            ):
                 self.enter_selection()
 
         elif name == "SELECT":
@@ -841,6 +951,7 @@ class SvxLinkLCD:
         elif (
             self.confirmation is None
             and self.save_favourite is None
+            and self.remove_favourite_state is None
             and self.detail is None
         ):
 
