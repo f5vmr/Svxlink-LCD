@@ -7,8 +7,9 @@ SvxLink LCD Controller V0.4
 Adafruit 16x2 RGB LCD Pi Plate.
 Live monitoring through SvxLink-Dash V4.1.
 
-Talkgroup and module command preview.
-NO DTMF TRANSMISSION IN THIS VERSION.
+Talkgroup and module control through the restricted
+SvxLink-LCD control service.
+DTMF transmission requires explicit confirmation.
 """
 
 import json
@@ -26,7 +27,9 @@ from dtmf_control import (
     load_lcd_config,
 )
 
-
+from talkgroup_store import load_favourites, add_favourite
+from svxlink_config import get_monitored_talkgroups
+from svxlink_config import  lookup_federation_talkgroup
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
 
 CONTROL_SOCKET = "/run/svxlink-lcd/control.sock"
@@ -82,7 +85,7 @@ class SvxLinkLCD:
         self.menu_stack = []
         self.detail = None
         self.confirmation = None
-
+        self.save_favourite = None
         self.previous_buttons = {
             "UP": False,
             "DOWN": False,
@@ -232,17 +235,30 @@ class SvxLinkLCD:
 
         if menu_name == "talkgroups":
 
-            favourites = self.config[
-                "talkgroups"
-            ]["favorites"]
+            favourites = load_favourites()
+            monitored = get_monitored_talkgroups()
 
-            return [
+            items = [
                 (
                     f"{entry['name']} {entry['number']}",
-                    f"tg:{index}",
+                    f"tg:{entry['number']}",
                 )
-                for index, entry in enumerate(favourites)
+                for entry in favourites
             ]
+
+            favourite_numbers = {
+                entry["number"]
+                for entry in favourites
+            }
+
+            for entry in monitored:
+                if entry["tg"] not in favourite_numbers:
+                    items.append((
+                        f"{entry['name']} {entry['tg']}",
+                        f"tg:{entry['tg']}",
+                    ))
+
+            return items
 
         if menu_name == "modules":
 
@@ -316,6 +332,39 @@ class SvxLinkLCD:
             f"> {label}",
         )
 
+
+    def render_save_favourite(self):
+
+        state = self.save_favourite
+        number = state["number"]
+
+        if state["acknowledged"]:
+
+            if state["error"]:
+                self.display(
+                    "FAVOURITE ERROR",
+                    "LEFT=BACK",
+                )
+
+            elif state["saved"]:
+                self.display(
+                    "FAVOURITE SAVED",
+                    f"TG {number}",
+                )
+
+            else:
+                self.display(
+                    "ALREADY SAVED",
+                    f"TG {number}",
+                )
+
+        else:
+            self.display(
+                f"SAVE TG {number}?",
+                "SEL=YES LEFT=NO",
+            )
+
+
     def render_confirmation(self):
 
         if self.confirmation["acknowledged"]:
@@ -327,9 +376,24 @@ class SvxLinkLCD:
                 )
 
             elif self.confirmation.get("transmitted"):
+                number = self.confirmation["value"]
+
+                can_save = (
+                    self.confirmation["action"] == "talkgroup"
+                    and not any(
+                        entry["number"] == number
+                        for entry in load_favourites()
+                    )
+                    and any(
+                        entry["tg"] == number
+                        for entry in get_monitored_talkgroups()
+                    )
+                )
+
                 self.display(
                     "DTMF COMMAND SENT",
-                    "CHECK NODE STATUS",
+                    "RIGHT=SAVE" if can_save
+                    else "LEFT=BACK",
                 )
 
             else:
@@ -404,6 +468,12 @@ class SvxLinkLCD:
 
     def render(self):
 
+        # Local favourites operations do not depend
+        # on Dashboard API availability.
+        if self.save_favourite is not None:
+            self.render_save_favourite()
+            return
+
         if not self.api_available:
             self.display(
                 "DASHBOARD ERROR",
@@ -431,13 +501,28 @@ class SvxLinkLCD:
 
         if target.startswith("tg:"):
 
-            index = int(target.split(":", 1)[1])
+            number = int(target.split(":", 1)[1])
 
-            entry = self.config[
-                "talkgroups"
-            ]["favorites"][index]
+            # Confirm that the selected TG is still
+            # either a favourite or a monitored TG.
+            favourites = load_favourites()
+            monitored = get_monitored_talkgroups()
 
-            number = entry["number"]
+            is_favourite = any(
+                entry["number"] == number
+                for entry in favourites
+            )
+
+            is_monitored = any(
+                entry["tg"] == number
+                for entry in monitored
+            )
+
+            if not (is_favourite or is_monitored):
+                raise ValueError(
+                    f"Talkgroup {number} is not available"
+                )
+
             action = "talkgroup"
             value = number
 
@@ -485,10 +570,10 @@ class SvxLinkLCD:
 
     def request_control_preview(self, action, value):
         """
-        Send a preview request to the independent
+        Send a confirmed command request to the independent
         SvxLink-LCD control service.
 
-        The service does not transmit DTMF.
+        The service enforces transmission authorisation.
         """
 
         request = {
@@ -533,7 +618,78 @@ class SvxLinkLCD:
 
         return result
 
+    def begin_save_favourite(self):
+        """Offer to save a successfully selected monitored TG."""
 
+        confirmation = self.confirmation
+
+        if not confirmation:
+            return
+
+        if (
+            confirmation["action"] != "talkgroup"
+            or not confirmation["acknowledged"]
+            or not confirmation["transmitted"]
+            or confirmation.get("error")
+        ):
+            return
+
+        number = confirmation["value"]
+
+        if any(
+            entry["number"] == number
+            for entry in load_favourites()
+        ):
+            return
+
+        if not any(
+            entry["tg"] == number
+            for entry in get_monitored_talkgroups()
+        ):
+            return
+
+        self.save_favourite = {
+            "number": number,
+            "acknowledged": False,
+            "saved": False,
+            "error": False,
+        }
+
+        self.confirmation = None
+
+
+    def confirm_save_favourite(self):
+        """Save the selected monitored TG without sending DTMF."""
+
+        if self.save_favourite is None:
+            return
+
+        if self.save_favourite["acknowledged"]:
+            return
+
+        number = self.save_favourite["number"]
+
+        try:
+            entry = lookup_federation_talkgroup(number)
+
+            name = (
+                entry["name"]
+                if entry
+                else f"TG {number}"
+            )
+
+            saved = add_favourite(number, name)
+
+            self.save_favourite["saved"] = saved
+
+        except (OSError, ValueError, KeyError) as error:
+            print(
+                f"FAVOURITE SAVE FAILED: {error}",
+                flush=True,
+            )
+            self.save_favourite["error"] = True
+
+        self.save_favourite["acknowledged"] = True
 
 
     def confirm_preview(self):
@@ -611,6 +767,10 @@ class SvxLinkLCD:
 
     def enter_selection(self):
 
+        if self.save_favourite is not None:
+            self.confirm_save_favourite()
+            return
+
         if self.confirmation is not None:
             self.confirm_preview()
             return
@@ -650,7 +810,10 @@ class SvxLinkLCD:
 
     def go_back(self):
 
-        if self.confirmation is not None:
+        if self.save_favourite is not None:
+            self.save_favourite = None
+
+        elif self.confirmation is not None:
             self.confirmation = None
 
         elif self.detail is not None:
@@ -664,16 +827,20 @@ class SvxLinkLCD:
         if name == "LEFT":
             self.go_back()
 
-        elif name in ("SELECT", "RIGHT"):
+        elif name == "RIGHT":
 
-            if (
-                self.confirmation is None
-                or name == "SELECT"
-            ):
+            if self.confirmation is not None:
+                self.begin_save_favourite()
+
+            elif self.save_favourite is None:
                 self.enter_selection()
+
+        elif name == "SELECT":
+            self.enter_selection()
 
         elif (
             self.confirmation is None
+            and self.save_favourite is None
             and self.detail is None
         ):
 

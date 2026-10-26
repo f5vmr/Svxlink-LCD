@@ -5,14 +5,12 @@
 SvxLink-LCD V0.4
 Restricted DTMF control-service handler.
 
-Initial implementation:
-    - Receives one JSON request
-    - Validates the requested operation
-    - Constructs the SvxLink DTMF command
-    - Returns a JSON preview
-    - DOES NOT TRANSMIT DTMF
+Accepts authorised talkgroup and module requests through
+the systemd-activated Unix socket.
 
-The systemd socket service will be added separately.
+Validates the requested command and SvxLink destination.
+Transmits DTMF only when explicitly enabled in the
+operational configuration.
 """
 
 import json
@@ -32,6 +30,9 @@ from svxlink_config import (
     validate_dtmf_destination,
     validate_runtime_pty,
 )
+
+from talkgroup_store import load_favourites
+from svxlink_config import get_monitored_talkgroups
 
 # Safety default: no DTMF transmission.
 ENABLE_DTMF_TRANSMISSION = True
@@ -94,21 +95,43 @@ def process_request(request, config):
 
     if action == "talkgroup":
 
-        favourites = config["talkgroups"]["favorites"]
+        # Authorise against the persistent operational
+        # favourites database, not the installation defaults.
+        favourites = load_favourites()
 
         matching = [
             entry
             for entry in favourites
-            if str(entry["number"]) == str(value)
+            if (
+                type(value) is int
+                and entry["number"] == value
+            )
         ]
 
-        if not matching:
-            raise ValueError(
-                "Talkgroup is not in the configured favourites"
-            )
+        if matching:
+            authorised_number = matching[0]["number"]
+
+        else:
+            # Monitored TGs may be selected without
+            # first being saved as favourites.
+            monitored = get_monitored_talkgroups()
+
+            if (
+                type(value) is not int
+                or not any(
+                    entry["tg"] == value
+                    for entry in monitored
+                )
+            ):
+                raise ValueError(
+                    "Talkgroup is neither a favourite "
+                    "nor a monitored talkgroup"
+                )
+
+            authorised_number = value
 
         command = build_talkgroup_command(
-            matching[0]["number"]
+            authorised_number
         )
 
     elif action == "module":
