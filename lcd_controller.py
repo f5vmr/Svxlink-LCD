@@ -319,10 +319,25 @@ class SvxLinkLCD:
     def render_confirmation(self):
 
         if self.confirmation["acknowledged"]:
-            self.display(
-                "PREVIEW ONLY",
-                "NO DTMF SENT",
-            )
+
+            if self.confirmation.get("error"):
+                self.display(
+                    "CONTROL ERROR",
+                    "CHECK NODE STATUS",
+                )
+
+            elif self.confirmation.get("transmitted"):
+                self.display(
+                    "DTMF COMMAND SENT",
+                    "CHECK NODE STATUS",
+                )
+
+            else:
+                self.display(
+                    "PREVIEW ONLY",
+                    "NO DTMF SENT",
+                )
+
             return
 
         self.display(
@@ -453,6 +468,8 @@ class SvxLinkLCD:
             "action": action,
             "value": value,
             "acknowledged": False,
+            "transmitted": False,
+            "error": False,
             "selected_port": (
                 self.status_data.get("selected_port")
             ),
@@ -509,9 +526,9 @@ class SvxLinkLCD:
                 result.get("error", "Control preview failed")
             )
 
-        if result.get("transmitted") is not False:
+        if not isinstance(result.get("transmitted"), bool):
             raise ValueError(
-                "Control service is not in preview mode"
+                "Invalid transmission status"
             )
 
         return result
@@ -539,26 +556,31 @@ class SvxLinkLCD:
                     "Control service command mismatch"
                 )
 
+            self.confirmation["transmitted"] = (
+                result["transmitted"]
+            )
+
         except (
             OSError,
             ValueError,
             TypeError,
+            KeyError,
         ) as error:
 
             print(
-                f"DTMF PREVIEW FAILED: {error}",
+                f"DTMF CONTROL FAILED: {error}",
                 flush=True,
             )
 
-            self.confirmation["label"] = "CONTROL ERROR"
+            self.confirmation["error"] = True
             self.confirmation["acknowledged"] = True
             return
 
         print(
-            f"DTMF SOCKET PREVIEW: "
+            f"DTMF CONTROL RESULT: "
             f"action={action}, "
             f"command={expected}, "
-            f"transmitted=False",
+            f"transmitted={result['transmitted']}",
             flush=True,
         )
 
