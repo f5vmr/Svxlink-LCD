@@ -188,6 +188,15 @@ def load_lcd_config(config_path=None):
     if node_type not in ("simplex", "repeater", "multiport"):
         raise ValueError("Invalid node type")
 
+    transmission_enabled = control.get(
+        "transmission_enabled", False
+    )
+
+    if type(transmission_enabled) is not bool:
+        raise ValueError(
+            "transmission_enabled must be a JSON boolean"
+        )
+
     if not isinstance(talkgroups, dict):
         raise ValueError("Invalid talkgroup configuration")
 

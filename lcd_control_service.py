@@ -152,7 +152,29 @@ def process_request(request, config):
 
     transmitted = False
 
-    if ENABLE_DTMF_TRANSMISSION:
+    control = config.get("control", {})
+
+    configured_type = control.get("node_type")
+    actual_type = destination["type"]
+
+    if (
+        ENABLE_DTMF_TRANSMISSION
+        and control.get("transmission_enabled") is True
+        and configured_type != actual_type
+    ):
+        raise ValueError(
+            f"LCD node type '{configured_type}' does not match "
+            f"SvxLink logic type '{actual_type}'"
+        )
+
+    live_enabled = (
+        ENABLE_DTMF_TRANSMISSION
+        and control.get("transmission_enabled") is True
+        and configured_type == actual_type
+        and len(discover_dtmf_logics()) == 1
+    )
+
+    if live_enabled:
         write_validated_dtmf(
             command,
             destination["pty"],
