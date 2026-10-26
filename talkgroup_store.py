@@ -91,7 +91,18 @@ def save_favourites(favourites, store_path=DEFAULT_STORE):
             handle.flush()
             os.fsync(handle.fileno())
 
+        # Preserve the group of an existing favourites file.
+        # On first creation, use the svxlink group.
+        import grp
+
+        if store_path.exists():
+            group_id = store_path.stat().st_gid
+        else:
+            group_id = grp.getgrnam("svxlink").gr_gid
+
+        os.chown(temporary_name, -1, group_id)
         os.chmod(temporary_name, 0o640)
+
         os.replace(temporary_name, store_path)
 
     finally:
