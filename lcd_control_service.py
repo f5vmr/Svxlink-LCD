@@ -212,9 +212,34 @@ def main():
 
     with socket.socket(fileno=3) as server:
 
+        try:
+            config = load_lcd_config()
+            control = config.get("control", {})
+
+            live_enabled = (
+                ENABLE_DTMF_TRANSMISSION
+                and control.get("transmission_enabled") is True
+            )
+
+            if live_enabled:
+                destination = discover_control_destination()
+
+                live_enabled = (
+                    control.get("node_type") == destination["type"]
+                    and len(discover_dtmf_logics()) == 1
+                )
+
+            mode = (
+                "live transmission enabled"
+                if live_enabled
+                else "preview only"
+            )
+
+        except (ValueError, OSError, KeyError) as exc:
+            mode = f"control unavailable: {exc}"
+
         print(
-            "SvxLink LCD control service ready "
-            "(preview only)",
+            f"SvxLink LCD control service ready ({mode})",
             flush=True,
         )
 
