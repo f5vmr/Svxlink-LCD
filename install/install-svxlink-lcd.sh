@@ -240,8 +240,10 @@ FAVOURITES_FILE="${FAVOURITES_DIR}/talkgroups.json"
 
 echo "Preparing persistent talkgroup favourites..."
 
-install -d -o pi -g svxlink -m 0750 \
+install -d -o pi -g svxlink -m 2750 \
     "${FAVOURITES_DIR}"
+
+chmod 2750 "${FAVOURITES_DIR}"
 
 if [[ ! -e "${FAVOURITES_FILE}" ]]; then
 
@@ -270,8 +272,6 @@ with store_path.open("x", encoding="utf-8") as handle:
 import grp
 
 store_path.chmod(0o640)
-import os
-os.chown(store_path, -1, grp.getgrnam("svxlink").gr_gid)
 
 print(f"Created {store_path}")
 PY
