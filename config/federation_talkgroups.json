@@ -1,0 +1,922 @@
+{
+  "version": 1,
+  "talkgroups": [
+    {
+      "tg": 91,
+      "name": "WO-WIDE",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 235,
+      "name": "UK-WIDE",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 302,
+      "name": "CA-WIDE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 310,
+      "name": "US-WIDE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 311,
+      "name": "US-CHAT1",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 312,
+      "name": "US-CHAT2",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 313,
+      "name": "US-CHAT3",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 314,
+      "name": "US-CHAT4",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 315,
+      "name": "US-CHAT5",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 316,
+      "name": "US-CHAT6",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 317,
+      "name": "US-CHAT7",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 318,
+      "name": "US-CHAT8",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 319,
+      "name": "US-CHAT9",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 505,
+      "name": "AUS-WIDE",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 530,
+      "name": "NZ-WIDE",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 531,
+      "name": "NZ-CHAT",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 910,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 911,
+      "name": "BLUELIGHTS",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 912,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 913,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 914,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 915,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 916,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 917,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 918,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 919,
+      "name": "WO-WIDE-QSY",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 2350,
+      "name": "UK-QSY",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 2351,
+      "name": "UK-QSY",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 2352,
+      "name": "UK-QSY",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 2353,
+      "name": "UK-QSY",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 2585,
+      "name": "ROC-HAM",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3020,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3021,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3022,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3023,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3024,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3025,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3026,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3027,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3028,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3029,
+      "name": "CA-REGIONAL",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3100,
+      "name": "US-CHAT10",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3101,
+      "name": "ALABAMA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3102,
+      "name": "ALASKA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3104,
+      "name": "ARIZONA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3105,
+      "name": "ARKANSAS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3106,
+      "name": "CALIFORNIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3108,
+      "name": "COLORADO",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3109,
+      "name": "CONNECTICUT",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3110,
+      "name": "DELAWARE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3111,
+      "name": "DISTRICT OF COLUMBIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3112,
+      "name": "FLORIDA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3113,
+      "name": "GEORGIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3115,
+      "name": "HAWAII",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3116,
+      "name": "IDAHO",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3117,
+      "name": "ILLINOIS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3118,
+      "name": "INDIANA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3119,
+      "name": "IOWA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3120,
+      "name": "KANSAS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3121,
+      "name": "KENTUCKY",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3122,
+      "name": "LOUISIANA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3123,
+      "name": "MAINE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3124,
+      "name": "MARYLAND",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3125,
+      "name": "MASSACHUSETTS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3126,
+      "name": "MICHIGAN",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3127,
+      "name": "MINNESOTA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3128,
+      "name": "MISSISSIPPI",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3129,
+      "name": "MISSOURI",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3130,
+      "name": "MONTANA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3131,
+      "name": "NEBRASKA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3132,
+      "name": "NEVADA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3133,
+      "name": "NEW HAMPSHIRE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3134,
+      "name": "NEW JERSEY",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3135,
+      "name": "NEW MEXICO",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3136,
+      "name": "NEW YORK",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3137,
+      "name": "NORTH CAROLINA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3138,
+      "name": "NORTH DAKOTA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3139,
+      "name": "OHIO",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3140,
+      "name": "OKLAHOMA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3141,
+      "name": "OREGON",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3142,
+      "name": "PENNSYLVANIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3144,
+      "name": "RHODE ISLAND",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3145,
+      "name": "SOUTH CAROLINA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3146,
+      "name": "SOUTH DAKOTA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3147,
+      "name": "TENNESSEE",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3148,
+      "name": "TEXAS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3149,
+      "name": "UTAH",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3150,
+      "name": "VERMONT",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3151,
+      "name": "VIRGINIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3153,
+      "name": "WASHINGTON",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3154,
+      "name": "WEST VIRGINIA",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3155,
+      "name": "WISCONSIN",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3156,
+      "name": "WYOMING",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5050,
+      "name": "AUS-CHAT",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5051,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5052,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5053,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5054,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5055,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5056,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5057,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5058,
+      "name": "AU-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5301,
+      "name": "ZL-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5302,
+      "name": "ZL-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5303,
+      "name": "ZL-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5304,
+      "name": "ZL-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 5305,
+      "name": "ZL-REGIONAL",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 9050,
+      "name": "EASTCOAST",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 9990,
+      "name": "PARROT",
+      "home": "NETWORK-WIDE",
+      "ownership": "network-wide",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23450,
+      "name": "YORKSNET",
+      "home": "YORKSNET",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23500,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23510,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23511,
+      "name": "SP",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23520,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23525,
+      "name": "FREEDOM",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23529,
+      "name": "ANGLOSCOT",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23530,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23540,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23550,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23556,
+      "name": "DVSPH",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23560,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23570,
+      "name": "UK-REGIONAL",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 23597,
+      "name": "IPA",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 31479,
+      "name": "NETOHOLICS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 31679,
+      "name": "BLINDHAMS",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 43136,
+      "name": "HAMRADIO2POINT0",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 47920,
+      "name": "OARC",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 49562,
+      "name": "BOREDOM",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 50542,
+      "name": "VK-OZHUB",
+      "home": "AUS-NZ",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 53573,
+      "name": "NWAG",
+      "home": "UK-WIDE",
+      "ownership": "domain",
+      "distribution": "network-wide"
+    },
+    {
+      "tg": 3167813,
+      "name": "BUFFALO",
+      "home": "NORTH-AMERICA",
+      "ownership": "peer",
+      "distribution": "network-wide"
+    }
+  ]
+}
