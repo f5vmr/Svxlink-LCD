@@ -25,6 +25,50 @@ from dtmf_control import (
     load_lcd_config,
 )
 
+from svxlink_config import (
+    discover_dtmf_logics,
+    select_dtmf_logic,
+    validate_dtmf_destination,
+)
+
+def discover_control_destination(logic_name=None, config_path=None):
+    """
+    Discover and validate an active SvxLink DTMF destination.
+
+    Single radio logic: selected automatically.
+    Multiple radio logics: explicit selection required.
+
+    No PTY is opened and no DTMF is transmitted.
+    """
+
+    if config_path is None:
+        destinations = discover_dtmf_logics()
+    else:
+        destinations = discover_dtmf_logics(config_path)
+
+    destination = select_dtmf_logic(
+        destinations,
+        logic_name=logic_name,
+    )
+
+    if logic_name is None:
+        logic_name = next(
+            name
+            for name, entry in destinations.items()
+            if entry is destination
+        )
+
+    pty = validate_dtmf_destination(
+        logic_name,
+        destination,
+    )
+
+    return {
+        "logic": logic_name,
+        "type": destination["type"],
+        "pty": pty,
+    }
+
 
 def process_request(request, config):
     """
@@ -86,10 +130,21 @@ def process_request(request, config):
             "Unsupported control action"
         )
 
+    # Resolve the destination from the actual SvxLink
+    # configuration, not from a caller-supplied PTY.
+    #
+    # A single radio logic is selected automatically.
+    # Multiple radio logics are rejected until an
+    # explicit port-selection mechanism is provided.
+
+    destination = discover_control_destination()
+
     return {
         "success": True,
         "action": action,
         "command": command,
+        "logic": destination["logic"],
+        "pty": destination["pty"],
         "transmitted": False,
     }
 
