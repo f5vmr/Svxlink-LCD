@@ -270,7 +270,8 @@ with store_path.open("x", encoding="utf-8") as handle:
 import grp
 
 store_path.chmod(0o640)
-store_path.chown(-1, grp.getgrnam("svxlink").gr_gid)
+import os
+os.chown(store_path, -1, grp.getgrnam("svxlink").gr_gid)
 
 print(f"Created {store_path}")
 PY
