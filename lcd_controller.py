@@ -28,8 +28,7 @@ from dtmf_control import (
 )
 
 from talkgroup_store import (load_favourites, add_favourite, remove_favourite,)
-from svxlink_config import get_monitored_talkgroups
-from svxlink_config import  lookup_federation_talkgroup
+from svxlink_config import (get_monitored_talkgroups, get_configured_macros, lookup_federation_talkgroup,)
 API_URL = "http://127.0.0.1:5000/api/status?port=1"
 
 CONTROL_SOCKET = "/run/svxlink-lcd/control.sock"
@@ -290,8 +289,15 @@ class SvxLinkLCD:
             ]
 
         if menu_name == "macros":
+
+            macro_config = get_configured_macros()
+
             return [
-                ("NOT CONFIGURED", "no_macros"),
+                (
+                    f"MACRO {entry['id']}",
+                    f"macro:{entry['id']}",
+                )
+                for entry in macro_config["macros"]
             ]
 
         return []
@@ -597,6 +603,31 @@ class SvxLinkLCD:
             )
 
             label = f"{entry['name']} {command}"
+
+        elif target.startswith("macro:"):
+
+            macro_id = target.split(":", 1)[1]
+
+            macro_config = get_configured_macros()
+
+            matching = [
+                entry
+                for entry in macro_config["macros"]
+                if entry["id"] == macro_id
+            ]
+
+            if not matching:
+                raise ValueError(
+                    f"Macro {macro_id} is not configured"
+                )
+
+            entry = matching[0]
+
+            action = "macro"
+            value = macro_id
+            command = entry["command"]
+
+            label = f"RUN MACRO {macro_id}?"
 
         else:
             return
@@ -907,7 +938,9 @@ class SvxLinkLCD:
             number = int(target.split(":", 1)[1])
             self.begin_remove_favourite(number)
 
-        elif target.startswith(("tg:", "module:")):
+        elif target.startswith(
+            ("tg:", "module:", "macro:")
+        ):
             self.prepare_command(target)
 
         else:
